@@ -1,0 +1,26 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+.env
+storage/
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+.env.example
+docker-compose.yml
+Document_Intelligence_Backend_Requirements.md
+IMPLEMENTATION_PLAN.md
+README.md
+pyproject.toml
+.DS_Store
+.vscode/
+uv.lock
