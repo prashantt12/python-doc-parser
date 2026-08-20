@@ -29,8 +29,8 @@ def validate_file_type(filename: str) -> str:
 This function is used to validate the size of a file.
 """
 def validate_file_size(size_bytes: int) -> None:
-    if size_bytes > settings.MAX_FILE_SIZE:
-        raise FileTooLargeError(size_bytes, settings.MAX_FILE_SIZE)
+    if size_bytes > settings.max_file_size:
+        raise FileTooLargeError(size_bytes, settings.max_file_size)
 
 """
 This function is used to sanitize the filename of a file.
@@ -48,5 +48,5 @@ def build_storage_path(*, user_id: uuid.UUID, document_id: uuid.UUID, file_type:
         settings.storage_path
         / f"user_{user_id}"
         / f"document_{document_id}"
-        / f"{file_type}.{file_type}"
+        / f"original.{file_type}"
     )

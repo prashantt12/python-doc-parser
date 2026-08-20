@@ -20,7 +20,6 @@ docker-compose.yml
 Document_Intelligence_Backend_Requirements.md
 IMPLEMENTATION_PLAN.md
 README.md
-pyproject.toml
 .DS_Store
 .vscode/
 uv.lock

@@ -14,8 +14,8 @@ from collections import Counter
 
 def clean_text(text: str) -> str:
     text = unicodedata.normalize("NFKC", text)
-    text = text.replace("\r\n", "\n").replace("\n", " ")
-    text = re.sub(r"[\t]+", " ", text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = re.sub(r"[ \t]+", " ", text)
     lines = [line.strip() for line in text.split("\n")]
     lines = [line for line in lines if line]
     return "\n".join(lines)
