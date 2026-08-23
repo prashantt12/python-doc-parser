@@ -1,10 +1,16 @@
 import uuid
 from pathlib import Path
+from app.exceptions import DocumentNotFoundError
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories import document as document_repo
 from app.repositories import job as job_repo
+from app.repositories import analysis as analysis_repo
 from app.utils.files import *
+from app.models.document import Document
+from app.repositories import job as job_repo
+
+MAX_PAGE_LIMIT = 100
 
 """
 This function is used to upload a document to the database and the storage.
@@ -43,11 +49,82 @@ async def upload_document(
         status="PROCESSING"
     )
 
-    document.id = document_id # This is used to assign the document id to the document object
-
     job = await job_repo.create_job(
         session, document_id=document.id
     )
     await session.commit()
 
     return document.id, document.status, job.id
+
+"""
+Enforces pagination limits and clamps values to valid ranges.
+"""
+def _clamp_pagination(
+    page: int,
+    limit: int
+) -> tuple[int,int]:
+    page = max(page, 1)
+    limit = min(max(limit,1), MAX_PAGE_LIMIT)
+    return page, limit
+
+"""
+Returns (documents, page, limit, total) for the paginated response.
+"""
+async def list_documents(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    page: int = 1,
+    limit: int = 20,
+) -> tuple[list[Document], int, int, int]:
+    page, limit = _clamp_pagination(page, limit)
+    items, total = await document_repo.list_documents(
+        session, user_id=user_id, page=page, limit=limit
+    )
+    return items, page, limit, total
+
+"""
+Return document or raise — API handler maps to 404 JSON.
+"""
+async def get_document(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    document_id: uuid.UUID,
+) -> Document:
+    print(f"user_id in get_document: {user_id}")
+    print(f"document_id in get_document: {document_id}")
+    document = await document_repo.get_document_by_id(
+        session, document_id=document_id, user_id=user_id
+    )
+    if document is None:
+        raise DocumentNotFoundError()
+    return document
+
+async def delete_document(
+    session: AsyncSession,
+    *,
+    user_id:uuid.UUID,
+    document_id:uuid.UUID,
+) -> None:
+    # confirm document exists and belongs to user
+    document = await get_document(
+        session, user_id=user_id, document_id=document_id
+    )
+    # delete all jobs for the document before deleting the document row
+    await job_repo.delete_jobs_for_document(
+        session, document_id=document_id
+    )
+    # delete all analysis for the document
+    await analysis_repo.delete_analysis_for_document(
+        session, document_id=document_id
+    )
+    # delete the document row
+    await document_repo.delete_document_row(
+        session, document=document
+    )
+    await session.commit()
+
+    file_path = Path(document.storage_path)
+    if file_path.is_file():
+        file_path.unlink()
