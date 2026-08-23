@@ -8,3 +8,6 @@ class FileTooLargeError(Exception):
         self.size_bytes = size_bytes
         self.max_bytes = max_bytes
         super().__init__(f"File too large: {size_bytes} bytes, max allowed: {max_bytes} bytes")
+
+class DocumentNotFoundError(Exception):
+    pass

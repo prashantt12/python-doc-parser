@@ -1,10 +1,103 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from app.logging import setup_logging
+from contextlib import asynccontextmanager
+from pathlib import Path
+from app.config import settings
+from app.db import SessionLocal
+from app.logging import setup_logging
+from app.repositories.user import get_or_create_demo_user
+from sqlalchemy import text
+
+from app.exceptions import *
+from fastapi.responses import JSONResponse
 
 setup_logging()
 
-app = FastAPI(title="Intelligent Document Parser")
+"""
+This function is used to create the lifespan of the application.
+It is used to create the storage path and the demo user.
+"""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings.storage_path.mkdir(parents=True, exist_ok=True)
+    async with SessionLocal() as session:
+        user = await get_or_create_demo_user(session, settings.demo_user_email)
+        app.state.demo_user_id = user.id
+    yield
+
+app = FastAPI(title="Intelligent Document Parser", lifespan=lifespan)
+
+"""
+Register the documents router.
+"""
+from app.api.documents import router as documents_router
+app.include_router(documents_router)
+
+
+"""
+This function is used to handle the unsupported file type error.
+"""
+@app.exception_handler(UnsupportedFileTypeError)
+async def unsupported_file_type_handler(
+    request: Request,
+    exc: UnsupportedFileTypeError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": "UNSUPPORTED_FILE_TYPE",
+            "message": str(exc)
+        },
+    )
+
+"""
+This function is used to handle the file too large error.
+"""
+@app.exception_handler(FileTooLargeError)
+async def file_too_large_handler(
+    request: Request,
+    exc: FileTooLargeError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": "FILE_TOO_LARGE",
+            "message": str(exc)
+        },
+    )
+
+"""
+This function is used to handle the document not found error.
+"""
+@app.exception_handler(DocumentNotFoundError)
+async def document_not_found_handler(
+    request: Request,
+    exc: DocumentNotFoundError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "DOCUMENT_NOT_FOUND",
+            "message": "Document does not exist"
+        },
+    )
 
 @app.get("/health")
 async def health() -> dict[str,str]:
     return {"status": "ok"}
+
+@app.get("/ready")
+async def ready() -> dict[str, str]:
+    async with SessionLocal() as session:
+        await session.execute(text("SELECT 1"))
+    storage = Path(settings.storage_path)
+    storage.mkdir(parents=True, exist_ok=True)
+    probe = storage / ".write_test"
+    probe.write_text("ok", encoding="utf-8")
+    probe.unlink(missing_ok=True)
+
+    return {
+        "status": "healthy",
+        "database": "healthy",
+        "storage": "healthy"
+    }
