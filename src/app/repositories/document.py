@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.document import Document
@@ -76,8 +77,6 @@ async def get_document_by_id(
     document_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> Document | None:
-    print(f"document_id in get_document_by_id: {document_id}")
-    print(f"user_id in get_document_by_id: {user_id}")
     result = await session.execute(
         select(Document).where(
             Document.id == document_id,
@@ -95,3 +94,43 @@ async def delete_document_row(
     document: Document,
 ) -> None:
     await session.delete(document)
+
+"""
+Function to get a document by id.
+"""
+async def get_document_by_id_only(
+    session: AsyncSession,
+    *,
+    document_id: uuid.UUID,
+) -> Document | None:
+    result = await session.execute(
+        select(Document).where(Document.id == document_id)
+    )
+    return result.scalar_one_or_none()
+
+"""
+Mark the status of a document as COMPLETED.
+"""
+async def mark_document_completed(
+    session: AsyncSession,
+    *,
+    document_id: uuid.UUID,
+) -> None:
+    result = await session.execute(
+        select(Document).where(Document.id == document_id)
+    )
+    document = result.scalar_one()
+    document.status = "COMPLETED"
+    document.processed_at = datetime.now(timezone.utc)
+
+
+async def mark_document_failed(
+    session: AsyncSession,
+    *,
+    document_id: uuid.UUID,
+) -> None:
+    result = await session.execute(
+        select(Document).where(Document.id == document_id)
+    )
+    document = result.scalar_one()
+    document.status = "FAILED"

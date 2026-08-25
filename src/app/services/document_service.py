@@ -1,14 +1,20 @@
 import uuid
 from pathlib import Path
-from app.exceptions import DocumentNotFoundError
+
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.exceptions import DocumentNotFoundError
+from app.models.document import Document
+from app.repositories import analysis as analysis_repo
 from app.repositories import document as document_repo
 from app.repositories import job as job_repo
-from app.repositories import analysis as analysis_repo
-from app.utils.files import *
-from app.models.document import Document
-from app.repositories import job as job_repo
+from app.utils.files import (
+    build_storage_path,
+    sanitize_filename,
+    validate_file_size,
+    validate_file_type,
+)
 
 MAX_PAGE_LIMIT = 100
 
@@ -92,8 +98,6 @@ async def get_document(
     user_id: uuid.UUID,
     document_id: uuid.UUID,
 ) -> Document:
-    print(f"user_id in get_document: {user_id}")
-    print(f"document_id in get_document: {document_id}")
     document = await document_repo.get_document_by_id(
         session, document_id=document_id, user_id=user_id
     )

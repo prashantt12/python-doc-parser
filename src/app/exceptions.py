@@ -11,3 +11,13 @@ class FileTooLargeError(Exception):
 
 class DocumentNotFoundError(Exception):
     pass
+
+class JobNotFoundError(Exception):
+    pass
+
+
+class DocumentProcessingError(Exception):
+    def __init__(self, message: str, *, retryable: bool = True) -> None:
+        self.message = message
+        self.retryable = retryable
+        super().__init__(message)

@@ -11,6 +11,9 @@ from sqlalchemy import text
 from app.exceptions import *
 from fastapi.responses import JSONResponse
 
+import asyncio
+from app.workers.document_worker import run_worker
+
 setup_logging()
 
 """
@@ -23,7 +26,17 @@ async def lifespan(app: FastAPI):
     async with SessionLocal() as session:
         user = await get_or_create_demo_user(session, settings.demo_user_email)
         app.state.demo_user_id = user.id
+    
+    stop_event = asyncio.Event()
+    worker_task = asyncio.create_task(run_worker(stop_event))
     yield
+
+    stop_event.set()
+    worker_task.cancel()
+    try:
+        await worker_task
+    except asyncio.CancelledError:
+        pass
 
 app = FastAPI(title="Intelligent Document Parser", lifespan=lifespan)
 
@@ -31,7 +44,10 @@ app = FastAPI(title="Intelligent Document Parser", lifespan=lifespan)
 Register the documents router.
 """
 from app.api.documents import router as documents_router
+from app.api.jobs import router as jobs_router
+
 app.include_router(documents_router)
+app.include_router(jobs_router)
 
 
 """
@@ -79,6 +95,19 @@ async def document_not_found_handler(
         content={
             "error": "DOCUMENT_NOT_FOUND",
             "message": "Document does not exist"
+        },
+    )
+
+@app.exception_handler(JobNotFoundError)
+async def job_not_found_handler(
+    request: Request,
+    exc: JobNotFoundError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "JOB_NOT_FOUND",
+            "message": "Job does not exist",
         },
     )
 
