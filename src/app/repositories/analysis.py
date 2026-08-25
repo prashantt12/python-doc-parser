@@ -1,5 +1,6 @@
 import uuid
 
+from app.models.document import Document
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,7 +45,9 @@ async def delete_analysis_for_document(
         delete(DocumentAnalysis).where(DocumentAnalysis.document_id == document_id)
     )
 
-
+"""
+This function is used to get an analysis by document id.
+"""
 async def get_analysis_by_document_id(
     session: AsyncSession,
     *,
@@ -54,3 +57,43 @@ async def get_analysis_by_document_id(
         select(DocumentAnalysis).where(DocumentAnalysis.document_id == document_id)
     )
     return result.scalar_one_or_none()
+
+"""
+This function is used to search the completed analyses for a user.
+"""
+async def search_completed_analyses(
+    session: AsyncSession,
+    *,
+    user_id,
+    query: str,
+) -> list[tuple[uuid.UUID, str, str]]:
+    pattern = f"%{query}%"  # Build a SQL pattern for the search query
+    result = await session.execute(
+        select(
+            Document.id,
+            Document.filename,
+            DocumentAnalysis.cleaned_text
+        )
+        .join(DocumentAnalysis, DocumentAnalysis.document_id == Document.id)
+        .where(
+            Document.user_id == user_id,
+            Document.status == "COMPLETED",
+            DocumentAnalysis.cleaned_text.ilike(pattern),
+        )
+    )
+
+    return list(result.all())
+
+"""
+This function is used to list the word counts for all completed documents for a user.
+"""
+async def list_word_counts_for_completed(session: AsyncSession, *, user_id: uuid.UUID) -> list[int]:
+    result = await session.execute(
+        select(DocumentAnalysis.word_count)
+        .join(Document, Document.id == DocumentAnalysis.document_id)
+        .where(
+            Document.user_id == user_id,
+            Document.status == "COMPLETED",
+        )
+    )
+    return [row[0] for row in result.all()]

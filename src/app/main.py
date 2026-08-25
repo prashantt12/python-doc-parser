@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.api.documents import router as documents_router
+from app.api.analytics import router as analytics_router
 from app.api.jobs import router as jobs_router
 from app.config import settings
 from app.db import SessionLocal
@@ -121,6 +122,7 @@ def create_app(*, enable_worker: bool = True) -> FastAPI:
 
     app.include_router(documents_router)
     app.include_router(jobs_router)
+    app.include_router(analytics_router)
     return app
 
 

@@ -16,6 +16,8 @@ dependencies = [
     "python-multipart>=0.0.32",
     "sqlalchemy[asyncio]>=2.0.52",
     "uvicorn>=0.52.3",
+    "numpy>=2.0.0",
+    "pandas>=2.2.0",
 ]
 
 [tool.uv.build-backend]

@@ -123,7 +123,9 @@ async def mark_document_completed(
     document.status = "COMPLETED"
     document.processed_at = datetime.now(timezone.utc)
 
-
+"""
+This function is used to mark a document as failed.
+"""
 async def mark_document_failed(
     session: AsyncSession,
     *,
@@ -134,3 +136,16 @@ async def mark_document_failed(
     )
     document = result.scalar_one()
     document.status = "FAILED"
+
+"""
+This function is used to list the documents for a user.
+"""
+async def list_documents_for_user(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+) -> list[Document]:
+    result = await session.execute(
+        select(Document).where(Document.user_id == user_id)
+    )
+    return list(result.scalars().all())

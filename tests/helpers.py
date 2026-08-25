@@ -39,3 +39,9 @@ async def wait_for_job_status(
             pytest.fail(f"job failed unexpectedly: {data}")
         await asyncio.sleep(0.05)
     pytest.fail(f"job {job_id} did not reach status {status}")
+
+
+async def upload_and_complete(client: AsyncClient) -> dict:
+    payload = await upload_fixture(client)
+    await wait_for_job_status(client, payload["job_id"], status="COMPLETED")
+    return payload

@@ -1,4 +1,5 @@
 import uuid
+from app.schemas.analytics import DocumentSearchResult, DocumentStatisticsResponse
 from fastapi import APIRouter, Depends, Request, File, UploadFile, Query, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
@@ -8,7 +9,7 @@ from app.schemas.document import (
     DocumentUploadResponse,
     PaginatedDocumentsResponse,
 )
-from app.services import document_service
+from app.services import analytics_service, document_service
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -52,6 +53,33 @@ async def list_documents(
         page=page,
         limit=limit,
         total=total
+    )
+
+"""
+This endpoint is used to search the documents for the user.
+"""
+@router.get("/search", response_model=list[DocumentSearchResult])
+async def search_documents(
+    request: Request,
+    q: str = Query(..., min_length=1),
+    session: AsyncSession = Depends(get_db),
+) -> list[DocumentSearchResult]:
+    user_id:uuid.UUID = request.app.state.demo_user_id
+    return await analytics_service.search_documents(
+        session, user_id=user_id, query=q
+    )
+
+"""
+This endpoint is used to get the statistics for the documents for the user.
+"""
+@router.get("/statistics", response_model=DocumentStatisticsResponse)
+async def get_document_statistics(
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> DocumentStatisticsResponse:
+    user_id:uuid.UUID = request.app.state.demo_user_id
+    return await analytics_service.get_document_statistics(
+        session, user_id=user_id
     )
 
 """
