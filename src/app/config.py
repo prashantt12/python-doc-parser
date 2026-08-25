@@ -16,5 +16,6 @@ class Settings(BaseSettings):
     max_retry_attempts: int = 3
     log_level: str = "INFO"
     demo_user_email: str = "demo@local.test"
+    processing_timeout_seconds: int = 60
 
 settings = Settings()

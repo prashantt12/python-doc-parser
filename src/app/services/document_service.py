@@ -5,6 +5,7 @@ from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import DocumentNotFoundError
+from app.models.analysis import DocumentAnalysis
 from app.models.document import Document
 from app.repositories import analysis as analysis_repo
 from app.repositories import document as document_repo
@@ -90,20 +91,25 @@ async def list_documents(
     return items, page, limit, total
 
 """
-Return document or raise — API handler maps to 404 JSON.
+Return document (and analysis when completed) or raise — API maps to 404 JSON.
 """
 async def get_document(
     session: AsyncSession,
     *,
     user_id: uuid.UUID,
     document_id: uuid.UUID,
-) -> Document:
+) -> tuple[Document, DocumentAnalysis | None]:
     document = await document_repo.get_document_by_id(
         session, document_id=document_id, user_id=user_id
     )
     if document is None:
         raise DocumentNotFoundError()
-    return document
+    analysis = None
+    if document.status == "COMPLETED":
+        analysis = await analysis_repo.get_analysis_by_document_id(
+            session, document_id=document_id
+        )
+    return document, analysis
 
 async def delete_document(
     session: AsyncSession,
@@ -111,8 +117,7 @@ async def delete_document(
     user_id:uuid.UUID,
     document_id:uuid.UUID,
 ) -> None:
-    # confirm document exists and belongs to user
-    document = await get_document(
+    document, _ = await get_document(
         session, user_id=user_id, document_id=document_id
     )
     # delete all jobs for the document before deleting the document row

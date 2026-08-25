@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.analysis import DocumentAnalysis
@@ -43,3 +43,14 @@ async def delete_analysis_for_document(
     await session.execute(
         delete(DocumentAnalysis).where(DocumentAnalysis.document_id == document_id)
     )
+
+
+async def get_analysis_by_document_id(
+    session: AsyncSession,
+    *,
+    document_id: uuid.UUID,
+) -> DocumentAnalysis | None:
+    result = await session.execute(
+        select(DocumentAnalysis).where(DocumentAnalysis.document_id == document_id)
+    )
+    return result.scalar_one_or_none()

@@ -36,8 +36,15 @@ async def _process_one_job(job_id: uuid.UUID, document_id: uuid.UUID) -> None:
                 f"Document {document_id} not found",
                 retryable=False,
             )
-        # if document is found, process the document
-        await processing_service.process_document(session, document=document)
+        logger.info(
+            "processing_started job_id=%s document_id=%s",
+            job_id,
+            document_id,
+        )
+        await asyncio.wait_for(
+            processing_service.process_document(session, document=document),
+            timeout=settings.processing_timeout_seconds,
+        )
         # mark the job as completed
         await job_repo.mark_job_completed(session, job_id=job_id)
         # mark the document as completed
@@ -62,8 +69,7 @@ async def _handle_failure(
 ) -> None:
     # get the message of the exception
     message = str(exc)
-    print(f"Error: {exc}")
-    retryable = getattr(exc, "retryable", True) # get the retryable attribute of the exception, default to True if not set
+    retryable = getattr(exc, "retryable", True)
 
     async with SessionLocal() as session:
         # get the job by id
@@ -127,11 +133,17 @@ async def run_worker(stop_event: asyncio.Event) -> None:
                 await _process_one_job(job_id, document_id)
             # if the job processing fails, handle the failure
             except DocumentProcessingError as exc:
-                # handle the failure of the job
                 await _handle_failure(job_id, document_id, exc)
-            # if any other exception occurs, handle the failure
+            except asyncio.TimeoutError:
+                await _handle_failure(
+                    job_id,
+                    document_id,
+                    DocumentProcessingError(
+                        f"Processing timed out after {settings.processing_timeout_seconds}s",
+                        retryable=True,
+                    ),
+                )
             except Exception as exc:
-                # handle the failure of the job
                 await _handle_failure(
                     job_id,
                     document_id,

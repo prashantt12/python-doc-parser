@@ -2,7 +2,12 @@ import uuid
 from fastapi import APIRouter, Depends, Request, File, UploadFile, Query, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
-from app.schemas.document import DocumentResponse, DocumentUploadResponse, PaginatedDocumentsResponse
+from app.schemas.document import (
+    DocumentAnalysisResponse,
+    DocumentResponse,
+    DocumentUploadResponse,
+    PaginatedDocumentsResponse,
+)
 from app.services import document_service
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -59,12 +64,24 @@ async def get_document(
     session: AsyncSession = Depends(get_db),
 ) -> DocumentResponse:
     user_id: uuid.UUID = request.app.state.demo_user_id
-    print(f"user_id: {user_id}")
-    print(f"document_id: {document_id}")
-    document = await document_service.get_document(
+    document, analysis = await document_service.get_document(
         session, user_id=user_id, document_id=document_id
     )
-    return DocumentResponse.model_validate(document)
+    return DocumentResponse(
+        id=document.id,
+        filename=document.filename,
+        file_type=document.file_type,
+        file_size=document.file_size,
+        status=document.status,
+        created_at=document.created_at,
+        updated_at=document.updated_at,
+        processed_at=document.processed_at,
+        analysis=(
+            DocumentAnalysisResponse.model_validate(analysis)
+            if analysis is not None
+            else None
+        ),
+    )
 
 """
 This endpoint is used to delete a specific document for the user.
