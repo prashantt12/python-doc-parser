@@ -88,6 +88,14 @@ async def test_list_documents_pagination(client_no_worker: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_list_documents_rejects_limit_above_max(
+    client_no_worker: AsyncClient,
+) -> None:
+    response = await client_no_worker.get("/documents", params={"page": 1, "limit": 101})
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_get_document_returns_404_for_unknown_id(
     client_no_worker: AsyncClient,
 ) -> None:

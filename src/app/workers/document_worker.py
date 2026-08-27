@@ -37,9 +37,10 @@ async def _process_one_job(job_id: uuid.UUID, document_id: uuid.UUID) -> None:
                 retryable=False,
             )
         logger.info(
-            "processing_started job_id=%s document_id=%s",
+            "processing_started job_id=%s document_id=%s file_type=%s",
             job_id,
             document_id,
+            document.file_type,
         )
         await asyncio.wait_for(
             processing_service.process_document(session, document=document),

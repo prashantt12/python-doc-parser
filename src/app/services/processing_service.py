@@ -26,10 +26,6 @@ async def process_document(
         raise DocumentProcessingError(
             f"File not found: {path}", retryable=False
         )
-    logger.info(
-        "processing start document_id: %s filetype= %s", document.id, document.file_type
-    )
-
     try:
         parser = get_parser(document.file_type)
         raw_text = await parser.parse(path)
@@ -40,16 +36,14 @@ async def process_document(
         ) from exc
     
     logger.info(
-        "document parsed document_id: %s", document.id
+        "document_parsed document_id=%s file_type=%s",
+        document.id,
+        document.file_type,
     )
 
     cleaned = clean_text(raw_text)
     stats = compute_statistics(cleaned)
     keywords = extract_keywords(cleaned)
-
-    logger.info(
-        "Analysis Complete document_id: %s", document.id
-    )
 
     await analysis_repo.create_analysis(
         session,
@@ -58,6 +52,7 @@ async def process_document(
         stats=stats,
         keywords=keywords,
     )
+    logger.info("analysis_completed document_id=%s", document.id)
 
 
 """After attempt 1 fail wait 1s, after 2 wait 2s, after 3 wait 4s."""

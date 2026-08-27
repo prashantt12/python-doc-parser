@@ -18,6 +18,7 @@ from app.exceptions import (
     UnsupportedFileTypeError,
 )
 from app.logging import setup_logging
+from app.middleware.request_id import RequestIdMiddleware
 from app.repositories.user import get_or_create_demo_user
 from app.workers.document_worker import run_worker as run_document_worker
 
@@ -47,6 +48,7 @@ def create_app(*, enable_worker: bool = True) -> FastAPI:
                 pass
 
     app = FastAPI(title="Intelligent Document Parser", lifespan=lifespan)
+    app.add_middleware(RequestIdMiddleware)
 
     @app.exception_handler(UnsupportedFileTypeError)
     async def unsupported_file_type_handler(

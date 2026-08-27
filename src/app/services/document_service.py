@@ -1,3 +1,4 @@
+import logging
 import uuid
 from pathlib import Path
 
@@ -18,6 +19,8 @@ from app.utils.files import (
 )
 
 MAX_PAGE_LIMIT = 100
+
+logger = logging.getLogger(__name__)
 
 """
 This function is used to upload a document to the database and the storage.
@@ -60,6 +63,13 @@ async def upload_document(
         session, document_id=document.id
     )
     await session.commit()
+
+    logger.info(
+        "document_uploaded document_id=%s job_id=%s file_type=%s",
+        document.id,
+        job.id,
+        file_type,
+    )
 
     return document.id, document.status, job.id
 

@@ -17,5 +17,6 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     demo_user_email: str = "demo@local.test"
     processing_timeout_seconds: int = 60
+    sqlalchemy_echo: bool = False
 
 settings = Settings()
